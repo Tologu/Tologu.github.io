@@ -573,8 +573,6 @@ const encadenamientoBracket = {
     ]
 };
 
-
-// ====================================================================
 // 2. GENERACIÓN DE ESTRUCTURA Y PESTAÑAS (TABS)
 // ====================================================================
 
@@ -694,6 +692,12 @@ function generarEstructuraPartidos() {
 
     // Después de renderizar la estructura, marcar aciertos en perfiles
     marcarAciertosPerfil();
+
+    // Renderizar clasificaciones iniciales de grupos (una vez existe el DOM)
+    gruposData.forEach(grupo => {
+        const clasificacionInicial = calcularClasificacion(grupo.nombre, grupo.equipos, pronosticosConfirmados);
+        renderizarClasificacion(grupo, clasificacionInicial);
+    });
 }
 
 
@@ -1508,13 +1512,7 @@ BONUS CAMPEÓN
     // 3. Escuchar eventos en el contenedor principal (para ELIMINATORIAS - CLIC)
     contenedorGrupos.addEventListener('click', manejarPronosticoEliminatoria);
 
-    // 4. Renderizar clasificaciones iniciales de grupos
-    gruposData.forEach(grupo => {
-        const clasificacionInicial = calcularClasificacion(grupo.nombre, grupo.equipos, pronosticosConfirmados);
-        renderizarClasificacion(grupo, clasificacionInicial);
-    });
-
-    // 5. Manejo del botón de reinicio
+    // 4. Manejo del botón de reinicio
     const btnReiniciar = document.getElementById('btn-reiniciar-app');
     if (btnReiniciar) {
         btnReiniciar.addEventListener('click', reiniciarPronosticos);
