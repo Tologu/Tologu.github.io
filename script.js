@@ -1221,8 +1221,8 @@ function generarDieciseisavos() {
         // Partido 75 – 1º Grupo F v 2º Grupo C 
         { llave: 75, equipo1: p['F'], equipo2: s['C'] },                               
         
-        // Partido 76 – 1º Grupo E v 2º Grupo F 
-        { llave: 76, equipo1: p['E'], equipo2: s['F'] }, 
+        // Partido 76 – 1º Grupo C v 2º Grupo F 
+        { llave: 76, equipo1: p['C'], equipo2: s['F'] }, 
 
 
         // Partido 77 – 1º Grupo I v 3º Grupo C/D/F/G/H (Tercero 2)
