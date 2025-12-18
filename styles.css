@@ -387,6 +387,26 @@ h2 {
     box-shadow: none;
 }
 
+.confirmado-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 1px solid #2e7d32;
+    background: #e6ffe6;
+    color: #2e7d32;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 1;
+    visibility: hidden;
+}
+
+.confirmado-check.visible {
+    visibility: visible;
+}
 
 .vs {
     margin: 0 15px;
@@ -587,24 +607,45 @@ footer {
     font-weight: bold;
 }
 
-/* 3º puesto: Candidato a mejor tercero (Fondo amarillo suave) */
-.tabla-clasificacion-grupo .candidato-tercero { 
-    background-color: #fffacd !important; /* Amarillo muy suave (LemonChiffon) */
+/* 3º puesto: Candidato a mejor tercero (Fondo amarillo claro) */
+.tabla-clasificacion-grupo .candidato-tercero {
+    background-color: #fffacd !important; /* Amarillo claro */
 }
 
-/* 4º puesto: Eliminado (Fondo rojo) */
-.tabla-clasificacion-grupo .eliminado { 
+/* 4º puesto: Eliminado (Fondo rojo suave) */
+.tabla-clasificacion-grupo .eliminado {
     background-color: #ffe6e6 !important; /* Rojo suave */
-}
-
-/* Estilo para filas pares (Si lo tienes, puede estar causando el conflicto) */
-.tabla-clasificacion-grupo tbody tr:nth-child(even) {
-    /* Si esta regla tiene un color de fondo, podría estar anulando los colores de posición */
-    background-color: #f9f9f9; 
 }
 
 .tabla-clasificacion-grupo td.equipo-nombre {
     font-weight: bold;
+}
+
+.mejores-terceros-wrapper {
+    margin-top: 12px;
+}
+
+.btn-mejores-terceros {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-mejores-terceros:hover {
+    background: #f6f6f6;
+}
+
+.mejores-terceros-panel {
+    margin-top: 10px;
+}
+
+.mejores-terceros-panel h4 {
+    margin: 0 0 10px 0;
+    color: var(--color-principal);
 }
 
 /* --- ESTILOS PARA EL BRACKET DE DIECISEISAVOS --- */

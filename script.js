@@ -745,6 +745,9 @@ function generarEstructuraPartidos() {
           const valorVisitante = resultadoGuardado ? resultadoGuardado.visitante : '';
           const btnConfirmarDisabled = (resultadoGuardado) ? 'disabled' : '';
           const btnCambiarDisabled = (resultadoGuardado) ? '' : 'disabled';
+          const checkConfirmadoHtml = esPaginaPartidos
+            ? `<span class="confirmado-check ${resultadoGuardado ? 'visible' : ''}" aria-hidden="true">✔</span>`
+            : '';
 
 
           htmlContent += `
@@ -760,7 +763,7 @@ function generarEstructuraPartidos() {
                 <span class="equipo-visitante">${p.visitante}</span>
               </div>
               <div class="acciones">
-                <button class="btn-confirmar" ${btnConfirmarDisabled}>Confirmar</button>
+                ${checkConfirmadoHtml}<button class="btn-confirmar" ${btnConfirmarDisabled}>Confirmar</button>
                 <button class="btn-cambiar" ${btnCambiarDisabled}>Cambiar</button>
                 ${esPaginaPartidos ? `<button class="btn-acertantes-exactos" data-partido="${nombrePartido}">Acertantes Exactos</button>` : ''}
               </div>
@@ -845,56 +848,57 @@ function generarEstructuraPartidos() {
 
 // ====================================================================
 // 3. FUNCIÓN DE CÁLCULO DE CLASIFICACIÓN
+
 // ====================================================================
 
-/**
- * Calcula y devuelve la tabla de clasificación de un grupo basándose en los resultados.
- */
 function calcularClasificacion(nombreGrupo, equiposGrupo, resultados) {
     const clasificacion = equiposGrupo.map(equipo => ({
         equipo: equipo,
         pj: 0, pg: 0, pe: 0, pp: 0,
         gf: 0, gc: 0, dg: 0,
-        ptos: 0 
+        ptos: 0
     }));
 
-    // Solo considera los resultados de la fase de grupos (identificados por 'vs' en la clave)
-    const partidosDelGrupo = Object.keys(resultados).filter(key => 
-        key.includes(' vs ') && resultados[key].grupo === nombreGrupo
-    );
+    // Procesar los resultados del grupo
+    Object.entries(resultados).forEach(([clavePartido, marcador]) => {
+        if (!clavePartido.includes(' vs ')) return;
+        if (!marcador || marcador.grupo !== nombreGrupo) return;
+        if (typeof marcador.local !== 'number' || typeof marcador.visitante !== 'number') return;
 
-    partidosDelGrupo.forEach(key => {
-        const resultado = resultados[key];
-        const [localNombre, visitanteNombre] = key.split(' vs ');
-        const golLocal = resultado.local;
-        const golVisitante = resultado.visitante;
+        const [equipoLocal, equipoVisitante] = clavePartido.split(' vs ').map(s => s.trim());
+        const local = clasificacion.find(e => e.equipo === equipoLocal);
+        const visitante = clasificacion.find(e => e.equipo === equipoVisitante);
+        if (!local || !visitante) return;
 
-        const equipoLocal = clasificacion.find(e => e.equipo === localNombre);
-        const equipoVisitante = clasificacion.find(e => e.equipo === visitanteNombre);
+        const gl = marcador.local;
+        const gv = marcador.visitante;
 
-        if (!equipoLocal || !equipoVisitante) return; 
+        local.pj += 1;
+        visitante.pj += 1;
 
-        // Actualizar Partidos Jugados (PJ) y Goles (GF, GC, DG)
-        equipoLocal.pj++;
-        equipoVisitante.pj++;
+        local.gf += gl;
+        local.gc += gv;
+        visitante.gf += gv;
+        visitante.gc += gl;
 
-        equipoLocal.gf += golLocal;
-        equipoLocal.gc += golVisitante;
-        
-        equipoVisitante.gf += golVisitante;
-        equipoVisitante.gc += golLocal;
-        
-        equipoLocal.dg = equipoLocal.gf - equipoLocal.gc;
-        equipoVisitante.dg = equipoVisitante.gf - equipoVisitante.gc; 
-
-        // Actualizar Puntos (Ptos, PG, PE, PP)
-        if (golLocal > golVisitante) {
-            equipoLocal.ptos += 3; equipoLocal.pg++; equipoVisitante.pp++;
-        } else if (golLocal < golVisitante) {
-            equipoVisitante.ptos += 3; equipoVisitante.pg++; equipoLocal.pp++;
+        if (gl > gv) {
+            local.pg += 1;
+            visitante.pp += 1;
+            local.ptos += 3;
+        } else if (gl < gv) {
+            visitante.pg += 1;
+            local.pp += 1;
+            visitante.ptos += 3;
         } else {
-            equipoLocal.ptos += 1; equipoVisitante.ptos += 1; equipoLocal.pe++; equipoVisitante.pe++;
+            local.pe += 1;
+            visitante.pe += 1;
+            local.ptos += 1;
+            visitante.ptos += 1;
         }
+    });
+
+    clasificacion.forEach(e => {
+        e.dg = e.gf - e.gc;
     });
 
     // Ordenar: Puntos > Diferencia de Goles > Goles a Favor
@@ -907,6 +911,72 @@ function calcularClasificacion(nombreGrupo, equiposGrupo, resultados) {
     return clasificacion;
 }
 
+
+function calcularMejoresTercerosParaResultados(resultados) {
+    const tercerosLugares = [];
+
+    gruposData.forEach(grupo => {
+        const clasificacionGrupo = calcularClasificacion(grupo.nombre, grupo.equipos, resultados);
+        if (clasificacionGrupo.length >= 3) {
+            const tercerLugar = clasificacionGrupo[2];
+            tercerosLugares.push({
+                grupo: grupo.nombre,
+                equipo: tercerLugar.equipo,
+                ptos: tercerLugar.ptos,
+                dg: tercerLugar.dg,
+                gf: tercerLugar.gf,
+                pj: tercerLugar.pj
+            });
+        }
+    });
+
+    // Clasificar: Ptos > DG > GF > PJ
+    tercerosLugares.sort((a, b) => {
+        if (a.ptos !== b.ptos) return b.ptos - a.ptos;
+        if (a.dg !== b.dg) return b.dg - a.dg;
+        if (a.gf !== b.gf) return b.gf - a.gf;
+        return a.pj - b.pj;
+    });
+
+    return tercerosLugares.slice(0, 8);
+}
+
+
+function calcularMejoresTerceros() {
+    return calcularMejoresTercerosParaResultados(pronosticosConfirmados);
+}
+
+
+function generarHtmlMejoresTerceros(terceros, titulo) {
+    let html = `
+        <div class="mejores-terceros-panel" hidden>
+            <h4>${titulo}</h4>
+            <table class="tabla-clasificacion-grupo tabla-mejores-terceros">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Grupo</th><th>Equipo</th><th>Ptos</th><th>DG</th><th>GF</th><th>PJ</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    terceros.forEach((t, idx) => {
+        html += `
+            <tr>
+                <td><strong>${idx + 1}</strong></td>
+                <td>${t.grupo}</td>
+                <td class="equipo-nombre">${t.equipo}</td>
+                <td><strong>${t.ptos}</strong></td>
+                <td>${t.dg}</td>
+                <td>${t.gf}</td>
+                <td>${t.pj}</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table></div>`;
+    return html;
+}
 
 // ====================================================================
 // 4. FUNCIÓN DE RENDERIZADO DE LA CLASIFICACIÓN
@@ -958,16 +1028,46 @@ function renderizarClasificacion(grupoData, clasificacion) {
     html += `</tbody></table>`;
     
     grupoElement.insertAdjacentHTML('beforeend', html);
+
+    // Botón y panel de mejores terceros (solo en partidos.html y perfiles)
+    if (esPaginaPartidos || perfilNombre) {
+        const wrapperExistente = grupoElement.querySelector('.mejores-terceros-wrapper');
+        if (wrapperExistente) {
+            wrapperExistente.remove();
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mejores-terceros-wrapper';
+
+        const textoBtn = perfilNombre ? 'Tus mejores terceros' : 'Los mejores terceros';
+        const tituloPanel = perfilNombre
+            ? 'Tus 8 mejores terceros (según tus pronósticos)'
+            : 'Los 8 mejores terceros (de los 12 grupos)';
+
+        const terceros = calcularMejoresTercerosParaResultados(pronosticosConfirmados);
+        wrapper.innerHTML = `
+            <button type="button" class="btn-mejores-terceros">${textoBtn}</button>
+            ${generarHtmlMejoresTerceros(terceros, tituloPanel)}
+        `;
+
+        grupoElement.appendChild(wrapper);
+
+        const btn = wrapper.querySelector('.btn-mejores-terceros');
+        const panel = wrapper.querySelector('.mejores-terceros-panel');
+        if (btn && panel) {
+            btn.addEventListener('click', () => {
+                const estaOculto = panel.hasAttribute('hidden');
+                if (estaOculto) {
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', '');
+                }
+            });
+        }
+    }
 }
 
 
-// ====================================================================
-// 5. MANEJO DE EVENTOS (Grupos - Sigue usando marcadores)
-// ====================================================================
-
-/**
- * Maneja el evento de confirmar o cambiar un resultado de partido de la FASE DE GRUPOS.
- */
 function manejarPronostico(event) {
     const boton = event.target;
     if (boton.classList.contains('btn-acertantes-exactos')) {
@@ -989,27 +1089,33 @@ function manejarPronostico(event) {
     if (!boton.classList.contains('btn-confirmar') && !boton.classList.contains('btn-cambiar')) return;
 
     const partidoCard = boton.closest('.partido-card');
+    if (!partidoCard) return;
+
     const inputLocal = partidoCard.querySelector('.equipos .marcador:nth-child(2)');
     const inputVisitante = partidoCard.querySelector('.equipos .marcador:nth-child(4)');
     const btnConfirmar = partidoCard.querySelector('.btn-confirmar');
     const btnCambiar = partidoCard.querySelector('.btn-cambiar');
-    
-    const equipoLocal = partidoCard.querySelector('.equipo-local').textContent.trim();
-    const equipoVisitante = partidoCard.querySelector('.equipo-visitante').textContent.trim();
+    const checkConfirmado = partidoCard.querySelector('.confirmado-check');
+    if (!inputLocal || !inputVisitante || !btnConfirmar || !btnCambiar) return;
+
+    const equipoLocal = partidoCard.querySelector('.equipo-local')?.textContent?.trim();
+    const equipoVisitante = partidoCard.querySelector('.equipo-visitante')?.textContent?.trim();
+    if (!equipoLocal || !equipoVisitante) return;
+
     const nombrePartido = `${equipoLocal} vs ${equipoVisitante}`;
-    
-    const grupoElementId = partidoCard.closest('.grupo').id;
-    if (!grupoElementId.startsWith('grupo-')) return;
-    
+
+    const grupoElementId = partidoCard.closest('.grupo')?.id;
+    if (!grupoElementId || !grupoElementId.startsWith('grupo-')) return;
+
     const grupoNombre = grupoElementId.replace('grupo-', '').toUpperCase();
     const grupoEncontrado = gruposData.find(g => g.nombre === grupoNombre);
 
     if (boton.classList.contains('btn-confirmar')) {
         const golLocal = parseInt(inputLocal.value);
         const golVisitante = parseInt(inputVisitante.value);
-        
+
         if (isNaN(golLocal) || isNaN(golVisitante) || golLocal < 0 || golVisitante < 0) {
-            alert("Por favor, introduce puntuaciones válidas (números no negativos).");
+            alert('Por favor, introduce puntuaciones válidas (números no negativos).');
             return;
         }
 
@@ -1018,19 +1124,19 @@ function manejarPronostico(event) {
             visitante: golVisitante,
             grupo: grupoNombre
         };
-        
+
         inputLocal.disabled = true;
         inputVisitante.disabled = true;
         btnConfirmar.disabled = true;
         btnCambiar.disabled = false;
-        
-        guardarPronosticos(); 
+        if (checkConfirmado) checkConfirmado.classList.add('visible');
 
+        guardarPronosticos();
     } else if (boton.classList.contains('btn-cambiar')) {
-        const pass = prompt("Introduce la contraseña para modificar este pronóstico:");
+        const pass = prompt('Introduce la contraseña para modificar este pronóstico:');
         if (pass !== passwordReiniciar) {
             if (pass !== null) {
-                alert("Contraseña incorrecta. No se ha modificado el pronóstico.");
+                alert('Contraseña incorrecta. No se ha modificado el pronóstico.');
             }
             return;
         }
@@ -1039,12 +1145,13 @@ function manejarPronostico(event) {
         inputVisitante.disabled = false;
         btnConfirmar.disabled = false;
         btnCambiar.disabled = true;
-        
+        if (checkConfirmado) checkConfirmado.classList.remove('visible');
+
         delete pronosticosConfirmados[nombrePartido];
 
-        guardarPronosticos(); 
+        guardarPronosticos();
     }
-    
+
     if (grupoEncontrado) {
         const clasificacionActualizada = calcularClasificacion(grupoNombre, grupoEncontrado.equipos, pronosticosConfirmados);
         renderizarClasificacion({ nombre: grupoNombre }, clasificacionActualizada);
@@ -1059,135 +1166,6 @@ function manejarPronostico(event) {
 }
 
 
-// ====================================================================
-// 6. LÓGICA DE BRACKET (Ganadores y Generación)
-// ====================================================================
-
-/**
- * Determina el equipo ganador (o perdedor) de un partido por su llave (Mxx).
- * @param {string} llavePartido - Ej: 'M73' o 'M101-P'.
- * @param {boolean} getLoser - Si es true, devuelve el perdedor.
- * @returns {string} Nombre del equipo ganador/perdedor, o 'TBD'.
- */
-function obtenerGanador(llavePartido, getLoser = false) {
-    if (llavePartido.endsWith('-P')) { 
-        // Si termina en '-P', buscamos al perdedor
-        return obtenerGanador(llavePartido.replace('-P', ''), true);
-    }
-    if (llavePartido.endsWith('-G')) { 
-        // Si termina en '-G', buscamos al ganador
-        return obtenerGanador(llavePartido.replace('-G', ''), false);
-    }
-
-    const resultado = pronosticosConfirmados[llavePartido];
-    
-    if (!resultado || resultado.equipoLocal === 'TBD' || resultado.equipoVisitante === 'TBD' || !resultado.ganador) {
-        return 'TBD';
-    }
-
-    const { ganador, equipoLocal, equipoVisitante } = resultado;
-    
-    if (getLoser) {
-        return (ganador === equipoLocal) ? equipoVisitante : equipoLocal;
-    }
-    
-    return ganador;
-}
-
-/**
- * Genera el listado de partidos para una ronda eliminatoria (R16, R8, R4, Final).
- * @param {string} ronda - Ej: 'R16', 'R8', 'R4', 'Final'.
- * @returns {object[]} Lista de partidos con equipos ya asignados.
- */
-function generarRonda(ronda) {
-    const partidosRonda = encadenamientoBracket[ronda];
-    const listaPartidos = [];
-
-    partidosRonda.forEach(p => {
-        let equipo1, equipo2;
-        let nombreLlave = `M${p.llave}`; 
-        
-        // Obtiene los equipos ganadores de la ronda anterior
-        equipo1 = obtenerGanador(p.equipo1Ganador);
-        equipo2 = obtenerGanador(p.equipo2Ganador);
-        
-        listaPartidos.push({
-            llave: p.llave, 
-            nombreCompletoLlave: nombreLlave, 
-            equipo1: equipo1,
-            equipo2: equipo2
-        });
-
-        // Lógica de Actualización de Pronósticos:
-        const datosActuales = pronosticosConfirmados[nombreLlave] || {};
-        
-        // Comprobar si los equipos han cambiado.
-        const equiposHanCambiado = datosActuales.equipoLocal !== equipo1 || datosActuales.equipoVisitante !== equipo2;
-        
-        if (equiposHanCambiado) {
-             // Reiniciar la llave si los equipos clasificados cambian
-             pronosticosConfirmados[nombreLlave] = {
-                 equipoLocal: equipo1, 
-                 equipoVisitante: equipo2,
-                 ronda: ronda
-             };
-        } else {
-            // Mantener los datos existentes si los equipos son los mismos
-            pronosticosConfirmados[nombreLlave] = {
-                ...datosActuales,
-                equipoLocal: equipo1, 
-                equipoVisitante: equipo2,
-                ronda: ronda
-            };
-        }
-    });
-
-    guardarPronosticos();
-    return listaPartidos;
-}
-
-// ----------------------------------------------------
-// 6.1 LÓGICA ESPECÍFICA: MEJORES TERCEROS Y DIECISEISAVOS (ACTUALIZADA)
-// ----------------------------------------------------
-
-/**
- * Itera sobre todos los grupos, encuentra el 3er lugar de cada uno 
- * y los clasifica para determinar cuáles avanzan (8 mejores de 12).
- */
-function calcularMejoresTerceros() {
-    const tercerosLugares = [];
-    
-    gruposData.forEach(grupo => {
-        const clasificacionGrupo = calcularClasificacion(grupo.nombre, grupo.equipos, pronosticosConfirmados);
-        
-        if (clasificacionGrupo.length >= 3) {
-            const tercerLugar = clasificacionGrupo[2];
-            
-            tercerosLugares.push({
-                grupo: grupo.nombre,
-                equipo: tercerLugar.equipo,
-                ptos: tercerLugar.ptos,
-                dg: tercerLugar.dg,
-                gf: tercerLugar.gf,
-                pj: tercerLugar.pj
-            });
-        }
-    });
-    
-    // Clasificar: Ptos > DG > GF > PJ
-    tercerosLugares.sort((a, b) => {
-        if (a.ptos !== b.ptos) return b.ptos - a.ptos;
-        if (a.dg !== b.dg) return b.dg - a.dg;
-        if (a.gf !== b.gf) return b.gf - a.gf;
-        return a.pj - b.pj; 
-    });
-
-    return tercerosLugares.slice(0, 8); // Devolver los 8 mejores
-}
-
-/**
- * Obtiene los 1° y 2° de cada grupo y los 8 mejores 3°s.
- */
 function obtenerClasificados() {
     const clasificados = { primeros: [], segundos: [], terceros: [] };
     const mejoresTerceros = calcularMejoresTerceros(); 
@@ -1195,7 +1173,6 @@ function obtenerClasificados() {
 
     gruposData.forEach(grupo => {
         const clasificacionGrupo = calcularClasificacion(grupo.nombre, grupo.equipos, pronosticosConfirmados);
-
         if (clasificacionGrupo.length >= 4) {
             clasificados.primeros.push({ equipo: clasificacionGrupo[0].equipo, grupo: grupo.nombre });
             clasificados.segundos.push({ equipo: clasificacionGrupo[1].equipo, grupo: grupo.nombre });
