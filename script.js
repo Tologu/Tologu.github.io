@@ -8,6 +8,8 @@ let passwordReiniciar;
 const esPaginaPartidos = window.location.pathname.includes('partidos.html');
 const CONTRASENA_CAMBIO_PERFIL = "OvejaBandolera";
 
+let pronosticosOficialesCache = null;
+
 let firebaseDisponible = false;
 let firebaseDb;
 
@@ -146,6 +148,12 @@ async function cargarPronosticosAsync(docId) {
         return await firebaseLeerPronosticos(docId);
     }
     return cargarPronosticos();
+}
+
+async function cargarPronosticosOficialesAsync() {
+    if (pronosticosOficialesCache) return pronosticosOficialesCache;
+    pronosticosOficialesCache = await cargarPronosticosPorDocId(DOC_ID_OFICIALES);
+    return pronosticosOficialesCache;
 }
 
 async function guardarPronosticosAsync(docId, pronosticos) {
@@ -305,6 +313,43 @@ function obtenerAcertantesExactos(nombrePartido) {
     }, []);
 }
 
+async function obtenerAcertantesExactosAsync(nombrePartido) {
+    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
+    const oficial = pronosticosOficiales[nombrePartido];
+    if (!oficial || typeof oficial.local !== 'number' || typeof oficial.visitante !== 'number') {
+        return [];
+    }
+
+    const mapaParticipantes = {
+        'Tomás': 'tomas',
+        'Miguel': 'miguel',
+        'Sofía': 'sofia',
+        'Inma': 'inma',
+        'Manolo': 'manolo',
+        'Martina': 'martina',
+        'Adri': 'adri',
+        'Fuen': 'fuen',
+        'Isa': 'isa',
+        'Jose': 'jose'
+    };
+
+    const resultados = await Promise.all(
+        Object.entries(mapaParticipantes).map(async ([nombreVisible, slug]) => {
+            const docId = DOC_ID_PARTICIPANTES[slug];
+            if (!docId) return null;
+            const pronosticosJugador = await cargarPronosticosPorDocId(docId);
+            const jug = pronosticosJugador[nombrePartido];
+            if (!jug) return null;
+            if (jug.local === oficial.local && jug.visitante === oficial.visitante) {
+                return nombreVisible;
+            }
+            return null;
+        })
+    );
+
+    return resultados.filter(Boolean);
+}
+
 function actualizarClasificacionIndex() {
     const tabla = document.getElementById('tabla-clasificacion');
     if (!tabla) return;
@@ -325,8 +370,8 @@ function actualizarClasificacionIndex() {
     };
 
     const clasificacion = Object.entries(mapaParticipantes).map(([nombreVisible, slug]) => {
-        const configPerfil = perfilesConfig[slug];
-        const pronosticosJugador = configPerfil ? cargarPronosticosPorClave(configPerfil.key) : {};
+        const config = perfilesConfig[slug];
+        const pronosticosJugador = config ? cargarPronosticosPorClave(config.key) : {};
         const { puntos, aciertos } = calcularPuntajePerfil(pronosticosOficiales, pronosticosJugador);
         return {
             nombreVisible,
@@ -359,6 +404,57 @@ function actualizarClasificacionIndex() {
     });
 }
 
+async function actualizarClasificacionIndexAsync() {
+    const tabla = document.getElementById('tabla-clasificacion');
+    if (!tabla) return;
+
+    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
+
+    const mapaParticipantes = {
+        'Tomás': 'tomas',
+        'Miguel': 'miguel',
+        'Sofía': 'sofia',
+        'Inma': 'inma',
+        'Manolo': 'manolo',
+        'Martina': 'martina',
+        'Adri': 'adri',
+        'Fuen': 'fuen',
+        'Isa': 'isa',
+        'Jose': 'jose'
+    };
+
+    const clasificacion = await Promise.all(
+        Object.entries(mapaParticipantes).map(async ([nombreVisible, slug]) => {
+            const docId = DOC_ID_PARTICIPANTES[slug];
+            const pronosticosJugador = docId ? await cargarPronosticosPorDocId(docId) : {};
+            const { puntos, aciertos } = calcularPuntajePerfil(pronosticosOficiales, pronosticosJugador);
+            return { nombreVisible, slug, puntos, aciertos };
+        })
+    );
+
+    clasificacion.sort((a, b) => {
+        if (a.puntos !== b.puntos) return b.puntos - a.puntos;
+        if (a.aciertos !== b.aciertos) return b.aciertos - a.aciertos;
+        return a.nombreVisible.localeCompare(b.nombreVisible, 'es', { sensitivity: 'base' });
+    });
+
+    const tbody = tabla.querySelector('tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    clasificacion.forEach((item, index) => {
+        const posicion = index + 1;
+        const fila = document.createElement('tr');
+        fila.innerHTML = `
+            <td>${posicion}</td>
+            <td><a href="perfil-${item.slug}.html">${item.nombreVisible}</a></td>
+            <td>${item.puntos}</td>
+            <td>${item.aciertos}</td>
+        `;
+        tbody.appendChild(fila);
+    });
+}
+
 // ====================================================================
 // 0.2 MARCADO DE ACIERTOS EN PERFILES (VISUAL)
 // ====================================================================
@@ -366,7 +462,52 @@ function actualizarClasificacionIndex() {
 function marcarAciertosPerfil() {
     if (!perfilNombre) return; // Solo para páginas de perfil
 
-    const pronosticosOficiales = cargarPronosticosPorClave(perfilesConfig.partidos.key);
+    const pronosticosOficiales = pronosticosOficialesCache || cargarPronosticosPorClave(perfilesConfig.partidos.key);
+
+    document.querySelectorAll('.partido-card').forEach(card => {
+        // limpiar badge previa
+        card.querySelector('.badge-puntos')?.remove();
+
+        const equipoLocal = card.querySelector('.equipo-local')?.textContent?.trim();
+        const equipoVisitante = card.querySelector('.equipo-visitante')?.textContent?.trim();
+        if (!equipoLocal || !equipoVisitante) return;
+
+        const nombrePartido = `${equipoLocal} vs ${equipoVisitante}`;
+        const oficial = pronosticosOficiales[nombrePartido];
+        const jugador = pronosticosConfirmados[nombrePartido];
+
+        card.classList.remove('acierto-exacto', 'acierto-signo');
+
+        if (!oficial || !jugador) return;
+        if (typeof oficial.local !== 'number' || typeof oficial.visitante !== 'number') return;
+        if (typeof jugador.local !== 'number' || typeof jugador.visitante !== 'number') return;
+
+        const esExacto = oficial.local === jugador.local && oficial.visitante === jugador.visitante;
+        if (esExacto) {
+            card.classList.add('acierto-exacto');
+            const badge = document.createElement('span');
+            badge.className = 'badge-puntos badge-exacto';
+            badge.textContent = '+5';
+            card.prepend(badge);
+            return;
+        }
+
+        const signoOficial = obtenerSignoResultado(oficial.local, oficial.visitante);
+        const signoJugador = obtenerSignoResultado(jugador.local, jugador.visitante);
+        if (signoOficial === signoJugador) {
+            card.classList.add('acierto-signo');
+            const badge = document.createElement('span');
+            badge.className = 'badge-puntos badge-signo';
+            badge.textContent = '+2';
+            card.prepend(badge);
+        }
+    });
+}
+
+async function marcarAciertosPerfilAsync() {
+    if (!perfilNombre) return; // Solo para páginas de perfil
+
+    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
 
     document.querySelectorAll('.partido-card').forEach(card => {
         // limpiar badge previa
@@ -691,7 +832,11 @@ function generarEstructuraPartidos() {
     });
 
     // Después de renderizar la estructura, marcar aciertos en perfiles
-    marcarAciertosPerfil();
+    if (firebaseDisponible) {
+        marcarAciertosPerfilAsync().catch(e => console.error(e));
+    } else {
+        marcarAciertosPerfil();
+    }
 
     // Renderizar clasificaciones iniciales de grupos (una vez existe el DOM)
     gruposData.forEach(grupo => {
@@ -847,7 +992,7 @@ function manejarPronostico(event) {
     if (!boton.classList.contains('btn-confirmar') && !boton.classList.contains('btn-cambiar')) return;
 
     if (!edicionHabilitada) {
-        alert('No tienes edición habilitada. Entra con tu participante y código.');
+        alert('No tienes edición habilitada. Entra con tu contraseña.');
         return;
     }
 
@@ -917,7 +1062,11 @@ function manejarPronostico(event) {
     }
 
     // Recalcular marcado de aciertos en perfiles
-    marcarAciertosPerfil();
+    if (firebaseDisponible) {
+        marcarAciertosPerfilAsync().catch(e => console.error(e));
+    } else {
+        marcarAciertosPerfil();
+    }
 }
 
 
@@ -987,18 +1136,17 @@ function generarRonda(ronda) {
         const equiposHanCambiado = datosActuales.equipoLocal !== equipo1 || datosActuales.equipoVisitante !== equipo2;
         
         if (equiposHanCambiado) {
-             // Si los equipos cambian (porque se eligió un ganador distinto en la ronda anterior), 
-             // la llave debe reiniciarse (borrando el 'ganador' anterior).
+             // Reiniciar la llave si los equipos clasificados cambian
              pronosticosConfirmados[nombreLlave] = {
-                 equipoLocal: equipo1,
+                 equipoLocal: equipo1, 
                  equipoVisitante: equipo2,
                  ronda: ronda
              };
         } else {
-            // Si los equipos son los mismos, mantenemos el estado actual, incluido el 'ganador'.
+            // Mantener los datos existentes si los equipos son los mismos
             pronosticosConfirmados[nombreLlave] = {
-                ...datosActuales, // Mantiene 'ganador' si existe
-                equipoLocal: equipo1,
+                ...datosActuales,
+                equipoLocal: equipo1, 
                 equipoVisitante: equipo2,
                 ronda: ronda
             };
@@ -1006,7 +1154,6 @@ function generarRonda(ronda) {
     });
 
     guardarPronosticos();
-
     return listaPartidos;
 }
 
@@ -1212,7 +1359,9 @@ function renderizarRondaEliminatoria(partidos, ronda) {
         let equiposJugadorRonda = null;
         let puntosRonda = 0;
         if (perfilNombre) {
-            const pronOficial = cargarPronosticosPorClave(perfilesConfig.partidos.key);
+            const pronOficial = (firebaseDisponible && pronosticosOficialesCache)
+                ? pronosticosOficialesCache
+                : cargarPronosticosPorClave(perfilesConfig.partidos.key);
             const soloFinal = ronda === 'Final';
             equiposOficialRonda = obtenerEquiposPorRonda(pronOficial, ronda, soloFinal);
             equiposJugadorRonda = obtenerEquiposPorRonda(pronosticosConfirmados, ronda, soloFinal);
@@ -1311,7 +1460,7 @@ function manejarPronosticoEliminatoria(event) {
     if (!esConfirmar && !esCambiar) return;
 
     if (!edicionHabilitada) {
-        alert('No tienes edición habilitada. Entra con tu participante y código.');
+        alert('No tienes edición habilitada. Entra con tu contraseña.');
         return;
     }
 
@@ -1383,6 +1532,7 @@ function manejarPronosticoEliminatoria(event) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const tablaClasificacion = document.getElementById('tabla-clasificacion');
+    
 
     // Si estamos en la página de clasificación, calculamos puntos y mostramos reglas
     if (tablaClasificacion) {
@@ -1426,73 +1576,112 @@ BONUS CAMPEÓN
     if (!contenedorGrupos || !contenedorTabs) return;
 
     const inicializarPronosticosUI = async () => {
-        // Perfil = solo lectura, cargar del docId del perfil
+        // Perfil = carga del docId del perfil, edición bajo contraseña
         if (perfilNombre) {
+            // Crear panel de acceso si el HTML no lo tiene
+            if (!document.getElementById('panel-acceso-perfil')) {
+                const main = document.querySelector('main') || document.body;
+                const panel = document.createElement('div');
+                panel.id = 'panel-acceso-perfil';
+                panel.className = 'panel-acceso';
+                panel.innerHTML = `
+                    <label for="codigo-perfil">Código</label>
+                    <input id="codigo-perfil" type="password" autocomplete="off">
+                    <button id="btn-entrar-perfil" type="button">Entrar</button>
+                `;
+                main.prepend(panel);
+            }
+
             docIdActual = DOC_ID_PARTICIPANTES[perfilNombre] || docIdActual;
             edicionHabilitada = false;
             pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
+            await cargarPronosticosOficialesAsync();
             generarEstructuraPartidos();
-            return;
-        }
+            if (firebaseDisponible) {
+                await marcarAciertosPerfilAsync();
+            } else {
+                marcarAciertosPerfil();
+            }
 
-        // partidos.html = selector + código para edición
-        if (esPaginaPartidos) {
-            const selector = document.getElementById('selector-participante');
-            const inputCodigo = document.getElementById('codigo-participante');
-            const btnEntrar = document.getElementById('btn-entrar');
-
-            if (selector && inputCodigo && btnEntrar) {
-                const participantes = [
-                    { value: DOC_ID_OFICIALES, label: 'Resultados Oficiales' },
-                    { value: 'tomas', label: 'Tomás' },
-                    { value: 'miguel', label: 'Miguel' },
-                    { value: 'sofia', label: 'Sofía' },
-                    { value: 'inma', label: 'Inma' },
-                    { value: 'manolo', label: 'Manolo' },
-                    { value: 'martina', label: 'Martina' },
-                    { value: 'adri', label: 'Adri' },
-                    { value: 'fuen', label: 'Fuen' },
-                    { value: 'isa', label: 'Isa' },
-                    { value: 'jose', label: 'Jose' }
-                ];
-                selector.innerHTML = '';
-                participantes.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.value;
-                    opt.textContent = p.label;
-                    selector.appendChild(opt);
-                });
-
-                // estado inicial: solo lectura de oficiales
-                docIdActual = DOC_ID_OFICIALES;
-                edicionHabilitada = false;
-                storageKey = obtenerStorageKeyParaDocId(docIdActual);
-                passwordReiniciar = obtenerPasswordParaDocId(docIdActual);
-                pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
-                generarEstructuraPartidos();
-
+            const inputCodigo = document.getElementById('codigo-perfil');
+            const btnEntrar = document.getElementById('btn-entrar-perfil');
+            const panelAcceso = document.getElementById('panel-acceso-perfil');
+            if (inputCodigo && btnEntrar) {
                 btnEntrar.addEventListener('click', async () => {
-                    const elegido = selector.value;
                     const codigo = inputCodigo.value;
-
-                    const esperado = obtenerPasswordParaDocId(elegido);
+                    const esperado = obtenerPasswordParaDocId(docIdActual);
                     if (codigo !== esperado) {
                         alert('Código incorrecto.');
                         return;
                     }
-
-                    docIdActual = elegido;
                     edicionHabilitada = true;
-                    storageKey = obtenerStorageKeyParaDocId(docIdActual);
-                    passwordReiniciar = obtenerPasswordParaDocId(docIdActual);
+                    if (panelAcceso) panelAcceso.style.display = 'none';
 
-                    pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
+                    const contenedorGruposLocal = document.getElementById('contenedor-grupos');
+                    const contenedorTabsLocal = document.getElementById('group-tabs');
+                    if (contenedorTabsLocal) contenedorTabsLocal.innerHTML = '';
+                    if (contenedorGruposLocal) contenedorGruposLocal.innerHTML = '';
+                    generarEstructuraPartidos();
+                    if (firebaseDisponible) {
+                        await marcarAciertosPerfilAsync();
+                    } else {
+                        marcarAciertosPerfil();
+                    }
+                });
+            }
+            return;
+        }
+
+        // partidos.html = oficiales (edición bajo contraseña)
+        if (esPaginaPartidos) {
+            // Crear panel de acceso si el HTML no lo tiene
+            if (!document.getElementById('panel-acceso-oficiales')) {
+                const main = document.querySelector('main') || document.body;
+                const panel = document.createElement('div');
+                panel.id = 'panel-acceso-oficiales';
+                panel.className = 'panel-acceso';
+                panel.innerHTML = `
+                    <label for="codigo-oficiales">Código</label>
+                    <input id="codigo-oficiales" type="password" autocomplete="off">
+                    <button id="btn-entrar-oficiales" type="button">Entrar</button>
+                `;
+                const h2 = main.querySelector('h2');
+                if (h2) h2.before(panel);
+                else main.prepend(panel);
+            }
+
+            const inputCodigo = document.getElementById('codigo-oficiales');
+            const btnEntrar = document.getElementById('btn-entrar-oficiales');
+            const panelAcceso = document.getElementById('panel-acceso-oficiales');
+            
+
+            docIdActual = DOC_ID_OFICIALES;
+            edicionHabilitada = false;
+            storageKey = obtenerStorageKeyParaDocId(docIdActual);
+            passwordReiniciar = obtenerPasswordParaDocId(docIdActual);
+            pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
+            pronosticosOficialesCache = pronosticosConfirmados;
+            generarEstructuraPartidos();
+
+            if (inputCodigo && btnEntrar) {
+                btnEntrar.addEventListener('click', async () => {
+                    const codigo = inputCodigo.value;
+                    const esperado = obtenerPasswordParaDocId(DOC_ID_OFICIALES);
+                    if (codigo !== esperado) {
+                        alert('Código incorrecto.');
+                        return;
+                    }
+                    edicionHabilitada = true;
+                    if (panelAcceso) panelAcceso.style.display = 'none';
+
                     contenedorTabs.innerHTML = '';
                     contenedorGrupos.innerHTML = '';
+                    pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
+                    pronosticosOficialesCache = pronosticosConfirmados;
                     generarEstructuraPartidos();
                 });
-                return;
             }
+            return;
         }
 
         // fallback: modo local
