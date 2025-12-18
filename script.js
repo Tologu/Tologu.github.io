@@ -103,7 +103,7 @@ function obtenerPasswordParaDocId(docId) {
 }
 
 let docIdActual = null;
-let edicionHabilitada = false;
+let edicionHabilitada = true;
 
 if (perfilNombre) {
     // Si la URL coincide con 'perfil-XXX.html'
@@ -112,7 +112,6 @@ if (perfilNombre) {
         storageKey = config.key;
         passwordReiniciar = config.password;
         docIdActual = DOC_ID_PARTICIPANTES[perfilNombre];
-        edicionHabilitada = false;
     } else {
         // Fallback si el nombre del perfil existe pero no está en la configuración
         console.error(`Configuración no encontrada para el perfil: ${perfilNombre}`);
@@ -124,7 +123,6 @@ if (perfilNombre) {
      storageKey = perfilesConfig.partidos.key;
      passwordReiniciar = perfilesConfig.partidos.password;
      docIdActual = DOC_ID_OFICIALES;
-     edicionHabilitada = false;
 } else {
     // Fallback por defecto (ej. si estamos en index.html, aunque no debería interactuar)
     storageKey = 'pronosticosMundial';
@@ -743,11 +741,10 @@ function generarEstructuraPartidos() {
         partidosDelGrupo.forEach(p => {
           const nombrePartido = `${p.local} vs ${p.visitante}`;
           const resultadoGuardado = pronosticosConfirmados[nombrePartido];
-          const disabledAttr = (resultadoGuardado || !edicionHabilitada) ? 'disabled' : '';
           const valorLocal = resultadoGuardado ? resultadoGuardado.local : '';
           const valorVisitante = resultadoGuardado ? resultadoGuardado.visitante : '';
-          const btnConfirmarDisabled = (resultadoGuardado || !edicionHabilitada) ? 'disabled' : '';
-          const btnCambiarDisabled = (resultadoGuardado && edicionHabilitada) ? '' : 'disabled';
+          const btnConfirmarDisabled = (resultadoGuardado) ? 'disabled' : '';
+          const btnCambiarDisabled = (resultadoGuardado) ? '' : 'disabled';
 
 
           htmlContent += `
@@ -757,9 +754,9 @@ function generarEstructuraPartidos() {
               </div>
               <div class="equipos">
                 <span class="equipo-local">${p.local}</span>
-                <input type="number" class="marcador" min="0" placeholder="0" value="${valorLocal}" ${disabledAttr}>
+                <input type="number" class="marcador" min="0" placeholder="0" value="${valorLocal}">
                 <span class="vs">vs</span>
-                <input type="number" class="marcador" min="0" placeholder="0" value="${valorVisitante}" ${disabledAttr}>
+                <input type="number" class="marcador" min="0" placeholder="0" value="${valorVisitante}">
                 <span class="equipo-visitante">${p.visitante}</span>
               </div>
               <div class="acciones">
@@ -991,11 +988,6 @@ function manejarPronostico(event) {
 
     if (!boton.classList.contains('btn-confirmar') && !boton.classList.contains('btn-cambiar')) return;
 
-    if (!edicionHabilitada) {
-        alert('No tienes edición habilitada. Entra con tu contraseña.');
-        return;
-    }
-
     const partidoCard = boton.closest('.partido-card');
     const inputLocal = partidoCard.querySelector('.equipos .marcador:nth-child(2)');
     const inputVisitante = partidoCard.querySelector('.equipos .marcador:nth-child(4)');
@@ -1035,15 +1027,12 @@ function manejarPronostico(event) {
         guardarPronosticos(); 
 
     } else if (boton.classList.contains('btn-cambiar')) {
-        // En perfiles, exigir contraseña para permitir cambiar un pronóstico ya confirmado
-        if (!esPaginaPartidos && perfilNombre) {
-            const pass = prompt("Introduce la contraseña para modificar este pronóstico:");
-            if (pass !== CONTRASENA_CAMBIO_PERFIL) {
-                if (pass !== null) {
-                    alert("Contraseña incorrecta. No se ha modificado el pronóstico.");
-                }
-                return;
+        const pass = prompt("Introduce la contraseña para modificar este pronóstico:");
+        if (pass !== passwordReiniciar) {
+            if (pass !== null) {
+                alert("Contraseña incorrecta. No se ha modificado el pronóstico.");
             }
+            return;
         }
 
         inputLocal.disabled = false;
@@ -1459,11 +1448,6 @@ function manejarPronosticoEliminatoria(event) {
     
     if (!esConfirmar && !esCambiar) return;
 
-    if (!edicionHabilitada) {
-        alert('No tienes edición habilitada. Entra con tu contraseña.');
-        return;
-    }
-
     const llavePartido = boton.dataset.llave; // Ej: M73, M99, M104
 
     // LÓGICA ROBUSTA PARA DETERMINAR LA RONDA POR RANGO DE LLAVE
@@ -1494,6 +1478,13 @@ function manejarPronosticoEliminatoria(event) {
         pronosticosConfirmados[llavePartido].ganador = equipoGanador;
         
     } else if (esCambiar) {
+        const pass = prompt("Introduce la contraseña para cambiar el ganador:");
+        if (pass !== passwordReiniciar) {
+            if (pass !== null) {
+                alert("Contraseña incorrecta. No se ha modificado el ganador.");
+            }
+            return;
+        }
         // 1. Eliminar el ganador
         delete pronosticosConfirmados[llavePartido].ganador;
         
@@ -1578,22 +1569,8 @@ BONUS CAMPEÓN
     const inicializarPronosticosUI = async () => {
         // Perfil = carga del docId del perfil, edición bajo contraseña
         if (perfilNombre) {
-            // Crear panel de acceso si el HTML no lo tiene
-            if (!document.getElementById('panel-acceso-perfil')) {
-                const main = document.querySelector('main') || document.body;
-                const panel = document.createElement('div');
-                panel.id = 'panel-acceso-perfil';
-                panel.className = 'panel-acceso';
-                panel.innerHTML = `
-                    <label for="codigo-perfil">Código</label>
-                    <input id="codigo-perfil" type="password" autocomplete="off">
-                    <button id="btn-entrar-perfil" type="button">Entrar</button>
-                `;
-                main.prepend(panel);
-            }
-
             docIdActual = DOC_ID_PARTICIPANTES[perfilNombre] || docIdActual;
-            edicionHabilitada = false;
+            edicionHabilitada = true;
             pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
             await cargarPronosticosOficialesAsync();
             generarEstructuraPartidos();
@@ -1602,85 +1579,18 @@ BONUS CAMPEÓN
             } else {
                 marcarAciertosPerfil();
             }
-
-            const inputCodigo = document.getElementById('codigo-perfil');
-            const btnEntrar = document.getElementById('btn-entrar-perfil');
-            const panelAcceso = document.getElementById('panel-acceso-perfil');
-            if (inputCodigo && btnEntrar) {
-                btnEntrar.addEventListener('click', async () => {
-                    const codigo = inputCodigo.value;
-                    const esperado = obtenerPasswordParaDocId(docIdActual);
-                    if (codigo !== esperado) {
-                        alert('Código incorrecto.');
-                        return;
-                    }
-                    edicionHabilitada = true;
-                    if (panelAcceso) panelAcceso.style.display = 'none';
-
-                    const contenedorGruposLocal = document.getElementById('contenedor-grupos');
-                    const contenedorTabsLocal = document.getElementById('group-tabs');
-                    if (contenedorTabsLocal) contenedorTabsLocal.innerHTML = '';
-                    if (contenedorGruposLocal) contenedorGruposLocal.innerHTML = '';
-                    generarEstructuraPartidos();
-                    if (firebaseDisponible) {
-                        await marcarAciertosPerfilAsync();
-                    } else {
-                        marcarAciertosPerfil();
-                    }
-                });
-            }
             return;
         }
 
         // partidos.html = oficiales (edición bajo contraseña)
         if (esPaginaPartidos) {
-            // Crear panel de acceso si el HTML no lo tiene
-            if (!document.getElementById('panel-acceso-oficiales')) {
-                const main = document.querySelector('main') || document.body;
-                const panel = document.createElement('div');
-                panel.id = 'panel-acceso-oficiales';
-                panel.className = 'panel-acceso';
-                panel.innerHTML = `
-                    <label for="codigo-oficiales">Código</label>
-                    <input id="codigo-oficiales" type="password" autocomplete="off">
-                    <button id="btn-entrar-oficiales" type="button">Entrar</button>
-                `;
-                const h2 = main.querySelector('h2');
-                if (h2) h2.before(panel);
-                else main.prepend(panel);
-            }
-
-            const inputCodigo = document.getElementById('codigo-oficiales');
-            const btnEntrar = document.getElementById('btn-entrar-oficiales');
-            const panelAcceso = document.getElementById('panel-acceso-oficiales');
-            
-
             docIdActual = DOC_ID_OFICIALES;
-            edicionHabilitada = false;
+            edicionHabilitada = true;
             storageKey = obtenerStorageKeyParaDocId(docIdActual);
             passwordReiniciar = obtenerPasswordParaDocId(docIdActual);
             pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
             pronosticosOficialesCache = pronosticosConfirmados;
             generarEstructuraPartidos();
-
-            if (inputCodigo && btnEntrar) {
-                btnEntrar.addEventListener('click', async () => {
-                    const codigo = inputCodigo.value;
-                    const esperado = obtenerPasswordParaDocId(DOC_ID_OFICIALES);
-                    if (codigo !== esperado) {
-                        alert('Código incorrecto.');
-                        return;
-                    }
-                    edicionHabilitada = true;
-                    if (panelAcceso) panelAcceso.style.display = 'none';
-
-                    contenedorTabs.innerHTML = '';
-                    contenedorGrupos.innerHTML = '';
-                    pronosticosConfirmados = await cargarPronosticosAsync(docIdActual);
-                    pronosticosOficialesCache = pronosticosConfirmados;
-                    generarEstructuraPartidos();
-                });
-            }
             return;
         }
 
