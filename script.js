@@ -1403,7 +1403,7 @@ function renderizarRondaEliminatoria(partidos, ronda) {
             const soloFinal = ronda === 'Final';
             equiposOficialRonda = obtenerEquiposPorRonda(pronOficial, ronda, soloFinal);
             equiposJugadorRonda = obtenerEquiposPorRonda(pronosticosConfirmados, ronda, soloFinal);
-            const mapaPuntosRonda = { R32: 2, R16: 3, R8: 4, R4: 5, Final: 6 };
+            const mapaPuntosRonda = { R32: 1, R16: 3, R8: 4, R4: 5, Final: 6 };
             puntosRonda = mapaPuntosRonda[ronda] || 0;
         }
         
@@ -1596,7 +1596,7 @@ FASE DE GRUPOS
 - 2 puntos por acertar simplemente (gana local, gana visitante o empate).
 
 ELIMINATORIAS (PRESENCIA POR RONDA)
-- Dieciseisavos: 2 puntos por cada equipo que esté en el resultado oficial y también en tu cuadro (cualquier cruce).
+- Dieciseisavos: 1 punto por cada equipo que esté en el resultado oficial y también en tu cuadro (cualquier cruce).
 - Octavos: 3 puntos por equipo.
 - Cuartos: 4 puntos por equipo.
 - Semifinales: 5 puntos por equipo.
