@@ -1296,6 +1296,78 @@ function generarDieciseisavos() {
 }
 
 
+function generarRonda(ronda) {
+    const configRonda = encadenamientoBracket[ronda];
+    if (!Array.isArray(configRonda)) return [];
+
+    const obtenerGanador = (llaveBase) => {
+        const data = pronosticosConfirmados[llaveBase];
+        return data && data.ganador ? data.ganador : null;
+    };
+
+    const obtenerPerdedor = (llaveBase) => {
+        const data = pronosticosConfirmados[llaveBase];
+        if (!data) return null;
+        if (!data.ganador) return null;
+        if (!data.equipoLocal || !data.equipoVisitante) return null;
+
+        if (data.ganador === data.equipoLocal) return data.equipoVisitante;
+        if (data.ganador === data.equipoVisitante) return data.equipoLocal;
+        return null;
+    };
+
+    const resolverReferenciaEquipo = (ref) => {
+        if (!ref) return 'TBD';
+
+        if (ref.endsWith('-G')) {
+            const llaveBase = ref.replace('-G', '');
+            return obtenerGanador(llaveBase) || 'TBD';
+        }
+
+        if (ref.endsWith('-P')) {
+            const llaveBase = ref.replace('-P', '');
+            return obtenerPerdedor(llaveBase) || 'TBD';
+        }
+
+        return obtenerGanador(ref) || 'TBD';
+    };
+
+    const partidos = configRonda.map(p => {
+        const nombreLlave = `M${p.llave}`;
+        const equipo1 = resolverReferenciaEquipo(p.equipo1Ganador);
+        const equipo2 = resolverReferenciaEquipo(p.equipo2Ganador);
+
+        const datosActuales = pronosticosConfirmados[nombreLlave] || {};
+        const equiposHanCambiado = datosActuales.equipoLocal !== equipo1 || datosActuales.equipoVisitante !== equipo2;
+
+        if (equiposHanCambiado) {
+            pronosticosConfirmados[nombreLlave] = {
+                equipoLocal: equipo1,
+                equipoVisitante: equipo2,
+                ronda
+            };
+        } else {
+            pronosticosConfirmados[nombreLlave] = {
+                ...datosActuales,
+                equipoLocal: equipo1,
+                equipoVisitante: equipo2,
+                ronda
+            };
+        }
+
+        return {
+            llave: p.llave,
+            nombreCompletoLlave: nombreLlave,
+            equipo1,
+            equipo2
+        };
+    });
+
+    guardarPronosticos();
+    return partidos;
+}
+
+
 // ====================================================================
 // 7. RENDERIZADO DE RONDAS ELIMINATORIAS
 // ====================================================================
