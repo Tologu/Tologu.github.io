@@ -317,13 +317,20 @@ h2 {
 .equipos {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
   font-weight: bold;
+  justify-content: center;
+}
+
+.equipo-local,
+.equipo-visitante {
+  min-width: 120px;
+  text-align: center;
 }
 
 .equipos .marcador {
-    width: 64px;
+    width: 50px;
     text-align: center;
 }
 
@@ -409,10 +416,12 @@ h2 {
 }
 
 .vs {
-    margin: 0 15px;
+    margin: 0 6px;
     color: var(--color-secundario);
-    font-size: 0.8em;
-    font-weight: normal;
+    font-size: 0.9em;
+    font-weight: bold;
+    min-width: 25px;
+    text-align: center;
 }
 
 .badge-puntos {

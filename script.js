@@ -1679,6 +1679,14 @@ BONUS CAMPEÓN
     }
 });
 
+// 5. Manejo del botón de reinicio total (en index.html) - Fuera del DOMContentLoaded anterior
+document.addEventListener('DOMContentLoaded', () => {
+    const btnReiniciarTotal = document.getElementById('btn-reiniciar-app-total');
+    if (btnReiniciarTotal) {
+        btnReiniciarTotal.addEventListener('click', reiniciarTodo);
+    }
+});
+
 // ====================================================================
 // 10. FUNCIÓN DE REINICIO TOTAL DE LA APP (Con Contraseña DINÁMICA)
 // ====================================================================
@@ -1702,5 +1710,41 @@ function reiniciarPronosticos() {
             });
     } else if (password !== null) {
         alert("Contraseña incorrecta. El reinicio ha sido cancelado.");
+    }
+}
+
+/**
+ * Reinicia TODOS los pronósticos de todos los perfiles y la página oficial.
+ */
+async function reiniciarTodo() {
+    const password = prompt('Introduce la contraseña maestra para reiniciar TODOS los pronósticos:');
+    
+    if (!password) return; // Cancelado por el usuario
+    
+    const passwordMaestra = 'OvejaBandolera'; // Contraseña maestra
+    
+    if (password !== passwordMaestra) {
+        alert("Contraseña incorrecta. El reinicio ha sido cancelado.");
+        return;
+    }
+
+    try {
+        // Reiniciar pronósticos oficiales (partidos.html)
+        await borrarPronosticosAsync(DOC_ID_OFICIALES);
+        
+        // Reiniciar pronósticos de todos los perfiles
+        const participantes = Object.keys(DOC_ID_PARTICIPANTES);
+        for (const participante of participantes) {
+            const docId = DOC_ID_PARTICIPANTES[participante];
+            if (docId) {
+                await borrarPronosticosAsync(docId);
+            }
+        }
+        
+        alert('¡TODOS los pronósticos han sido reiniciados! La página se recargará ahora.');
+        window.location.reload();
+    } catch (e) {
+        console.error(e);
+        alert('No se pudieron reiniciar todos los pronósticos.');
     }
 }
