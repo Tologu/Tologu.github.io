@@ -73,6 +73,8 @@ const perfilesConfig = {
     fuen: { key: 'pronosticosMundial_Fuen', password: 'Fuen2026' },
     isa: { key: 'pronosticosMundial_Isa', password: 'Isa2026' },
     jose: { key: 'pronosticosMundial_Jose', password: 'Jose2026' },
+    maria: { key: 'pronosticosMundial_Maria', password: 'Maria2026' },
+    moi: { key: 'pronosticosMundial_Moi', password: 'Moi2026' },
     // Añade más perfiles aquí si es necesario
 };
 
@@ -87,7 +89,9 @@ const DOC_ID_PARTICIPANTES = {
     adri: 'adri',
     fuen: 'fuen',
     isa: 'isa',
-    jose: 'jose'
+    jose: 'jose',
+    maria: 'maria',
+    moi: 'moi'
 };
 
 function obtenerStorageKeyParaDocId(docId) {
@@ -294,6 +298,8 @@ function obtenerAcertantesExactos(nombrePartido) {
         'Martina': 'martina',
         'Adri': 'adri',
         'Fuen': 'fuen',
+        'María': 'maria',
+        'Moi': 'moi',
         'Isa': 'isa',
         'Jose': 'jose'
     };
@@ -363,6 +369,8 @@ function actualizarClasificacionIndex() {
         'Martina': 'martina',
         'Adri': 'adri',
         'Fuen': 'fuen',
+        'María': 'maria',
+        'Moi': 'moi',
         'Isa': 'isa',
         'Jose': 'jose'
     };
@@ -418,7 +426,9 @@ async function actualizarClasificacionIndexAsync() {
         'Adri': 'adri',
         'Fuen': 'fuen',
         'Isa': 'isa',
-        'Jose': 'jose'
+        'Jose': 'jose',
+        'María': 'maria',
+        'Moi': 'moi'
     };
 
     const clasificacion = await Promise.all(
