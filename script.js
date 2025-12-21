@@ -334,7 +334,9 @@ async function obtenerAcertantesExactosAsync(nombrePartido) {
         'Adri': 'adri',
         'Fuen': 'fuen',
         'Isa': 'isa',
-        'Jose': 'jose'
+        'Jose': 'jose',
+        'María': 'maria',
+        'Moi': 'moi'
     };
 
     const resultados = await Promise.all(
