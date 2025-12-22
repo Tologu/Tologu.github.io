@@ -80,20 +80,6 @@ nav a.active {
 }
 
 /* Navegación adaptable en móvil */
-@media (max-width: 768px) {
-    nav {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-        padding: 0 10px;
-    }
-
-    nav a {
-        margin: 2px 0;
-    }
-}
-
 /* CONTENIDO PRINCIPAL */
 main {
     padding: 30px 5%;
@@ -134,18 +120,6 @@ main {
 
 .perfiles-menu a:active {
     transform: translateY(0px);
-}
-
-@media (max-width: 768px) {
-    .perfiles-menu {
-        padding: 10px;
-        gap: 8px;
-    }
-
-    .perfiles-menu a {
-        font-size: 0.9em;
-        padding: 7px 10px;
-    }
 }
 
 h2 {
@@ -286,18 +260,6 @@ h2 {
     gap: 8px 12px;
     align-items: center;
     position: relative;
-}
-
-@media (max-width: 900px) {
-    .partido-card {
-        grid-template-columns: 1fr;
-        align-items: flex-start;
-    }
-
-    .acciones {
-        width: 100%;
-        justify-content: flex-start;
-    }
 }
 
 .info-partido {
@@ -705,11 +667,6 @@ footer {
 }
 
 /* En móviles, una sola columna */
-@media (max-width: 768px) {
-    .partido-bracket {
-        width: 100%;
-    }
-}
 /* ==================================================================== */
 /* ESTILOS ESPECÍFICOS DE LAS RONDAS ELIMINATORIAS (R32, R16, R8, R4, FINAL) */
 /* ==================================================================== */
