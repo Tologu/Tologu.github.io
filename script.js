@@ -8,6 +8,14 @@ let passwordReiniciar;
 const esPaginaPartidos = window.location.pathname.includes('partidos.html');
 const CONTRASENA_CAMBIO_PERFIL = "OvejaBandolera";
 
+// Obtener la parte del nombre del archivo de la URL (ej: 'perfil-tomas')
+const pathName = window.location.pathname;
+
+// Agregar clase 'perfil-page' al body si estamos en un perfil (para deshabilitar responsive)
+if (pathName.match(/perfil-(\w+)\.html/)) {
+    document.documentElement.classList.add('perfil-page');
+}
+
 let pronosticosOficialesCache = null;
 
 let firebaseDisponible = false;
@@ -52,8 +60,7 @@ async function firebaseBorrarPronosticos(docId) {
     await firebaseDb.collection('pronosticos').doc(docId).delete();
 }
 
-// Obtener la parte del nombre del archivo de la URL (ej: 'perfil-tomas')
-const pathName = window.location.pathname;
+// Obtener el match del perfil
 let perfilMatch = pathName.match(/perfil-(\w+)\.html/);
 let perfilNombre = perfilMatch ? perfilMatch[1] : null;
 

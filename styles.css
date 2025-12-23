@@ -879,3 +879,33 @@ footer {
     background: #d4ffa3;
     box-shadow: 0 0 6px rgba(139, 195, 74, 0.35);
 }
+
+/* ==================================================================== */
+/* DESACTIVAR RESPONSIVE EN PERFILES (perfil-*.html) */
+/* ==================================================================== */
+body.perfil-page {
+    min-width: 1024px;
+    overflow-x: auto;
+}
+
+body.perfil-page main {
+    min-width: 1000px;
+}
+
+body.perfil-page .partido-card {
+    grid-template-columns: auto 1.5fr auto !important;
+}
+
+body.perfil-page .equipos {
+    flex-wrap: nowrap !important;
+}
+
+body.perfil-page .group-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+body.perfil-page .tab-button {
+    min-width: max-content;
+    white-space: nowrap;
+}
