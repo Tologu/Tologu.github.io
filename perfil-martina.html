@@ -1,45 +1,52 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pronósticos de Martina</title>
-    <link rel="stylesheet" href="styles.css"> 
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="admin-panel-flotante">
+        <button id="btn-reiniciar-app" title="Herramienta de Administración (Requiere Contraseña)">
+            ⚙️
+        </button>
+    </div>
     <header>
-        <h1>⚽ Pronósticos de Martina 🏆</h1>
-        <nav>
-            <a href="index.html">Clasificación General</a>
-            <a href="partidos.html">Partidos Oficiales</a>
+        <h1>⚽ Porra Mundial 2026 🌍</h1>
+        <nav class="menu">
+            <a href="partidos.html">📅 Partidos</a>
+            <a href="index.html">📊 Clasificación</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="menu perfiles-menu">
             <a href="perfil-tomas.html">Tomás</a>
             <a href="perfil-miguel.html">Miguel</a>
             <a href="perfil-sofia.html">Sofía</a>
             <a href="perfil-inma.html">Inma</a>
             <a href="perfil-manolo.html">Manolo</a>
-            <a href="perfil-martina.html" class="active">Martina</a>
+            <a href="perfil-martina.html">Martina</a>
             <a href="perfil-adri.html">Adri</a>
             <a href="perfil-fuen.html">Fuen</a>
             <a href="perfil-isa.html">Isa</a>
             <a href="perfil-jose.html">Jose</a>
             <a href="perfil-maria.html">María</a>
             <a href="perfil-moi.html">Moi</a>
-        </nav>
-    </header>
-
-    <main class="contenedor-principal">
-        <div id="admin-panel-flotante">
-            <button id="btn-reiniciar-app" title="Herramienta de Administración (Requiere Contraseña)">
-                ⚙️
-            </button>
         </div>
-        <div id="group-tabs"></div>
-        <div id="contenedor-grupos"></div>
+
+        <h2>Pronósticos de Martina</h2>
+
+        <div class="group-tabs" id="group-tabs">
+        </div>
+
+        <div id="contenedor-grupos">
+        </div>
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
-    <script src="script.js"></script> 
+    <script src="script.js"></script>
 </body>
 </html>
