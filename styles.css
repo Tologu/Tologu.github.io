@@ -35,8 +35,8 @@ header {
 }
 
 header h1 {
-    margin-bottom: 10px;
-    font-size: 3em;
+    margin-bottom: 20px;
+    font-size: 2.3em;
     font-weight: bold;
     letter-spacing: 2px;
     background: linear-gradient(135deg, #ffd700, #cfc246, #ffd700);
