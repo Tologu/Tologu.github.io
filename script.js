@@ -82,6 +82,8 @@ const perfilesConfig = {
     jose: { key: 'pronosticosMundial_Jose', password: 'Jose2026' },
     maria: { key: 'pronosticosMundial_Maria', password: 'Maria2026' },
     moi: { key: 'pronosticosMundial_Moi', password: 'Moi2026' },
+    alba: { key: 'pronosticosMundial_Alba', password: 'Alba2026' },
+    enrique: { key: 'pronosticosMundial_Enrique', password: 'Enrique2026' },
     // Añade más perfiles aquí si es necesario
 };
 
@@ -98,7 +100,9 @@ const DOC_ID_PARTICIPANTES = {
     isa: 'isa',
     jose: 'jose',
     maria: 'maria',
-    moi: 'moi'
+    moi: 'moi',
+    alba: 'alba',
+    enrique: 'enrique'
 };
 
 function obtenerStorageKeyParaDocId(docId) {
@@ -308,7 +312,9 @@ function obtenerAcertantesExactos(nombrePartido) {
         'María': 'maria',
         'Moi': 'moi',
         'Isa': 'isa',
-        'Jose': 'jose'
+        'Jose': 'jose',
+        'Alba': 'alba',
+        'Enrique': 'enrique'
     };
 
     return Object.entries(mapaParticipantes).reduce((acc, [nombreVisible, slug]) => {
@@ -343,7 +349,9 @@ async function obtenerAcertantesExactosAsync(nombrePartido) {
         'Isa': 'isa',
         'Jose': 'jose',
         'María': 'maria',
-        'Moi': 'moi'
+        'Moi': 'moi',
+        'Alba': 'alba',
+        'Enrique': 'enrique'
     };
 
     const resultados = await Promise.all(
@@ -381,7 +389,9 @@ function actualizarClasificacionIndex() {
         'María': 'maria',
         'Moi': 'moi',
         'Isa': 'isa',
-        'Jose': 'jose'
+        'Jose': 'jose',
+        'Alba': 'alba',
+        'Enrique': 'enrique'
     };
 
     const clasificacion = Object.entries(mapaParticipantes).map(([nombreVisible, slug]) => {
@@ -437,7 +447,9 @@ async function actualizarClasificacionIndexAsync() {
         'Isa': 'isa',
         'Jose': 'jose',
         'María': 'maria',
-        'Moi': 'moi'
+        'Moi': 'moi',
+        'Alba': 'alba',
+        'Enrique': 'enrique'
     };
 
     const clasificacion = await Promise.all(
