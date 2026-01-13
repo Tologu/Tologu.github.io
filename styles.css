@@ -218,31 +218,48 @@ h2 {
     width: 100%;
     border-collapse: collapse;
     background-color: white;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 15px rgba(20, 62, 104, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 #tabla-clasificacion th, #tabla-clasificacion td {
-    padding: 15px;
+    padding: 18px 20px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 #tabla-clasificacion thead {
-    background-color: var(--color-principal);
+    background: linear-gradient(135deg, var(--color-principal) 0%, #1a5a96 100%);
     color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.9em;
 }
 
 #tabla-clasificacion tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: #f8f9fa;
 }
 
 #tabla-clasificacion tbody tr:hover {
-    background-color: #e6f7ff;
+    background-color: #e3f2fd;
     cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 #tabla-clasificacion tbody a {
-    color: #000;
+    color: var(--color-principal);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+#tabla-clasificacion tbody a:hover {
+    color: var(--color-secundario);
+    background-color: rgba(253, 185, 39, 0.1);
 }
 
 #tabla-clasificacion tbody tr:first-child {
