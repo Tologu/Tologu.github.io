@@ -4,7 +4,7 @@
     background-color: red;
 }/* ESTILOS GENERALES Y RESET */
 :root {
-    --color-principal: #126a19; /* Azul oscuro - Color de la Porra */
+    --color-principal: #143e68; /* Azul oscuro - Color de la Porra */
     --color-secundario: #fdb927; /* Amarillo - Acento */
     --color-fondo: #f4f7f6;
     --color-texto: #333;
@@ -32,6 +32,30 @@ header {
     text-align: center;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
+    background-image: 
+        url('us.png'),
+        url('ca.png'),
+        url('mexico.png');
+    background-position: 
+        25% 0%,
+        50% 0%,
+        75% 0%;
+    background-repeat: no-repeat;
+    background-size: 
+        20% 100%,
+        20% 100%,
+        20% 100%;
+}
+
+header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(20, 62, 104, 0.85);
+    z-index: 0;
 }
 
 header h1 {
@@ -39,28 +63,25 @@ header h1 {
     font-size: 3em;
     font-weight: bold;
     letter-spacing: 2px;
-    background: linear-gradient(135deg, #ffd700, #cfc246, #ffd700);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #FFD700;
     text-shadow: 
-        0 0 20px rgba(255, 215, 0, 0.8),
-        0 0 40px rgba(255, 215, 0, 0.6),
-        0 0 60px rgba(255, 215, 0, 0.4),
+        0 0 20px rgba(255, 255, 255, 0.5),
+        0 0 40px rgba(255, 255, 255, 0.3),
         3px 3px 0px rgba(0, 0, 0, 0.3),
         6px 6px 0px rgba(0, 0, 0, 0.2),
         9px 9px 0px rgba(0, 0, 0, 0.1);
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.7));
-    animation: resplandor 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes resplandor {
     0%, 100% {
         filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.7));
         text-shadow: 
-            0 0 20px rgba(255, 215, 0, 0.8),
-            0 0 40px rgba(255, 215, 0, 0.6),
-            0 0 60px rgba(255, 215, 0, 0.4),
+            0 0 20px rgba(255, 255, 255, 0.8),
+            0 0 40px rgba(255, 255, 255, 0.6),
+            0 0 60px rgb(243, 243, 243),
             3px 3px 0px rgba(0, 0, 0, 0.3),
             6px 6px 0px rgba(0, 0, 0, 0.2),
             9px 9px 0px rgba(0, 0, 0, 0.1);
@@ -94,6 +115,11 @@ header h1 .copa-giratoria {
     100% {
         transform: rotateY(360deg) rotateX(5deg);
     }
+}
+
+nav {
+    position: relative;
+    z-index: 1;
 }
 
 nav a {
