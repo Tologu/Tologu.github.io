@@ -816,8 +816,8 @@ function generarEstructuraPartidos() {
 
     // 2. GENERAR PESTAÑAS DE RONDAS ELIMINATORIAS
     const rondasEliminatorias = [
-        { id: 'ronda-r32', nombre: '🏆 R32', funcion: generarDieciseisavos, ronda: 'R32' },
-        { id: 'ronda-r16', nombre: '⏩ R16', funcion: () => generarRonda('R16'), ronda: 'R16' },
+        { id: 'ronda-r32', nombre: '🏆 Dieciseisavos', funcion: generarDieciseisavos, ronda: 'R32' },
+        { id: 'ronda-r16', nombre: '⏩ Octavos', funcion: () => generarRonda('R16'), ronda: 'R16' },
         { id: 'ronda-r8', nombre: '⭐ Cuartos', funcion: () => generarRonda('R8'), ronda: 'R8' },
         { id: 'ronda-r4', nombre: '✨ Semis', funcion: () => generarRonda('R4'), ronda: 'R4' },
         { id: 'ronda-final', nombre: '🥇 Final', funcion: () => generarRonda('Final'), ronda: 'Final' },
