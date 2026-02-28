@@ -7,12 +7,13 @@ let storageKey;
 let passwordReiniciar;
 const esPaginaPartidos = window.location.pathname.includes('partidos.html');
 const CONTRASENA_CAMBIO_PERFIL = "OvejaBandolera";
+const REGEX_PERFIL = /perfil-(\w+)\.html/; // Compilar regex una sola vez
 
 // Obtener la parte del nombre del archivo de la URL (ej: 'perfil-tomas')
 const pathName = window.location.pathname;
 
 // Agregar clase 'perfil-page' al body si estamos en un perfil (para deshabilitar responsive)
-if (pathName.match(/perfil-(\w+)\.html/)) {
+if (REGEX_PERFIL.test(pathName)) {
     document.documentElement.classList.add('perfil-page');
 }
 
@@ -61,8 +62,8 @@ async function firebaseBorrarPronosticos(docId) {
 }
 
 // Obtener el match del perfil
-let perfilMatch = pathName.match(/perfil-(\w+)\.html/);
-let perfilNombre = perfilMatch ? perfilMatch[1] : null;
+const perfilMatch = pathName.match(REGEX_PERFIL);
+const perfilNombre = perfilMatch ? perfilMatch[1] : null;
 
 // Mapa de configuración para todos los perfiles
 const perfilesConfig = {
@@ -88,6 +89,25 @@ const perfilesConfig = {
 };
 
 const DOC_ID_OFICIALES = 'oficiales';
+
+// Mapa global de participantes (nombre visible -> slug)
+const PARTICIPANTES = {
+    'Tomás': 'tomas',
+    'Miguel': 'miguel',
+    'Sofía': 'sofia',
+    'Inma': 'inma',
+    'Manolo': 'manolo',
+    'Martina': 'martina',
+    'Adri': 'adri',
+    'Fuen': 'fuen',
+    'Isa': 'isa',
+    'Jose': 'jose',
+    'María': 'maria',
+    'Moi': 'moi',
+    'Alba': 'alba',
+    'Enrique': 'enrique'
+};
+
 const DOC_ID_PARTICIPANTES = {
     tomas: 'tomas',
     miguel: 'miguel',
@@ -280,186 +300,82 @@ function calcularPuntajePerfil(pronosticosOficiales, pronosticosPerfil) {
         });
     });
 
-    // 3) BONUS CAMPEÓN: +4 si acierta el ganador del mundial (M104)
-    const finalOficial = pronosticosOficiales['M104'];
-    const finalJugador = pronosticosPerfil['M104'];
-    if (finalOficial && finalJugador && finalOficial.ganador && finalJugador.ganador) {
-        if (finalOficial.ganador === finalJugador.ganador) {
-            puntos += 4;
-            aciertos += 1;
-        }
-    }
 
     return { puntos, aciertos, exactos };
 }
 
-function obtenerAcertantesExactos(nombrePartido) {
-    const pronosticosOficiales = cargarPronosticosPorClave(perfilesConfig.partidos.key);
+async function obtenerAcertantesExactos(nombrePartido, useAsync = false) {
+    const pronosticosOficiales = useAsync 
+        ? await cargarPronosticosOficialesAsync() 
+        : cargarPronosticosPorClave(perfilesConfig.partidos.key);
+    
     const oficial = pronosticosOficiales[nombrePartido];
     if (!oficial || typeof oficial.local !== 'number' || typeof oficial.visitante !== 'number') {
         return [];
     }
 
-    const mapaParticipantes = {
-        'Tomás': 'tomas',
-        'Miguel': 'miguel',
-        'Sofía': 'sofia',
-        'Inma': 'inma',
-        'Manolo': 'manolo',
-        'Martina': 'martina',
-        'Adri': 'adri',
-        'Fuen': 'fuen',
-        'María': 'maria',
-        'Moi': 'moi',
-        'Isa': 'isa',
-        'Jose': 'jose',
-        'Alba': 'alba',
-        'Enrique': 'enrique'
-    };
-
-    return Object.entries(mapaParticipantes).reduce((acc, [nombreVisible, slug]) => {
-        const configPerfil = perfilesConfig[slug];
-        if (!configPerfil) return acc;
-        const pronosticosJugador = cargarPronosticosPorClave(configPerfil.key);
-        const jug = pronosticosJugador[nombrePartido];
-        if (!jug) return acc;
-        if (jug.local === oficial.local && jug.visitante === oficial.visitante) {
-            acc.push(nombreVisible);
-        }
-        return acc;
-    }, []);
-}
-
-async function obtenerAcertantesExactosAsync(nombrePartido) {
-    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
-    const oficial = pronosticosOficiales[nombrePartido];
-    if (!oficial || typeof oficial.local !== 'number' || typeof oficial.visitante !== 'number') {
-        return [];
-    }
-
-    const mapaParticipantes = {
-        'Tomás': 'tomas',
-        'Miguel': 'miguel',
-        'Sofía': 'sofia',
-        'Inma': 'inma',
-        'Manolo': 'manolo',
-        'Martina': 'martina',
-        'Adri': 'adri',
-        'Fuen': 'fuen',
-        'Isa': 'isa',
-        'Jose': 'jose',
-        'María': 'maria',
-        'Moi': 'moi',
-        'Alba': 'alba',
-        'Enrique': 'enrique'
-    };
-
-    const resultados = await Promise.all(
-        Object.entries(mapaParticipantes).map(async ([nombreVisible, slug]) => {
-            const docId = DOC_ID_PARTICIPANTES[slug];
-            if (!docId) return null;
-            const pronosticosJugador = await cargarPronosticosPorDocId(docId);
+    if (useAsync) {
+        const resultados = await Promise.all(
+            Object.entries(PARTICIPANTES).map(async ([nombreVisible, slug]) => {
+                const docId = DOC_ID_PARTICIPANTES[slug];
+                if (!docId) return null;
+                const pronosticosJugador = await cargarPronosticosPorDocId(docId);
+                const jug = pronosticosJugador[nombrePartido];
+                if (!jug) return null;
+                if (jug.local === oficial.local && jug.visitante === oficial.visitante) {
+                    return nombreVisible;
+                }
+                return null;
+            })
+        );
+        return resultados.filter(Boolean);
+    } else {
+        return Object.entries(PARTICIPANTES).reduce((acc, [nombreVisible, slug]) => {
+            const configPerfil = perfilesConfig[slug];
+            if (!configPerfil) return acc;
+            const pronosticosJugador = cargarPronosticosPorClave(configPerfil.key);
             const jug = pronosticosJugador[nombrePartido];
-            if (!jug) return null;
+            if (!jug) return acc;
             if (jug.local === oficial.local && jug.visitante === oficial.visitante) {
-                return nombreVisible;
+                acc.push(nombreVisible);
             }
-            return null;
-        })
-    );
-
-    return resultados.filter(Boolean);
+            return acc;
+        }, []);
+    }
 }
 
-function actualizarClasificacionIndex() {
+// Alias para compatibilidad hacia atrás
+async function obtenerAcertantesExactosAsync(nombrePartido) {
+    return obtenerAcertantesExactos(nombrePartido, true);
+}
+
+async function actualizarClasificacionIndex(useAsync = false) {
     const tabla = document.getElementById('tabla-clasificacion');
     if (!tabla) return;
 
-    const pronosticosOficiales = cargarPronosticosPorClave(perfilesConfig.partidos.key);
+    const pronosticosOficiales = useAsync
+        ? await cargarPronosticosOficialesAsync()
+        : cargarPronosticosPorClave(perfilesConfig.partidos.key);
 
-    const mapaParticipantes = {
-        'Tomás': 'tomas',
-        'Miguel': 'miguel',
-        'Sofía': 'sofia',
-        'Inma': 'inma',
-        'Manolo': 'manolo',
-        'Martina': 'martina',
-        'Adri': 'adri',
-        'Fuen': 'fuen',
-        'María': 'maria',
-        'Moi': 'moi',
-        'Isa': 'isa',
-        'Jose': 'jose',
-        'Alba': 'alba',
-        'Enrique': 'enrique'
-    };
-
-    const clasificacion = Object.entries(mapaParticipantes).map(([nombreVisible, slug]) => {
-        const config = perfilesConfig[slug];
-        const pronosticosJugador = config ? cargarPronosticosPorClave(config.key) : {};
-        const { puntos, aciertos } = calcularPuntajePerfil(pronosticosOficiales, pronosticosJugador);
-        return {
-            nombreVisible,
-            slug,
-            puntos,
-            aciertos
-        };
-    });
-
-    clasificacion.sort((a, b) => {
-        if (a.puntos !== b.puntos) return b.puntos - a.puntos;
-        if (a.aciertos !== b.aciertos) return b.aciertos - a.aciertos;
-        return a.nombreVisible.localeCompare(b.nombreVisible, 'es', { sensitivity: 'base' });
-    });
-
-    const tbody = tabla.querySelector('tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    clasificacion.forEach((item, index) => {
-        const posicion = index + 1;
-        const fila = document.createElement('tr');
-        fila.innerHTML = `
-            <td>${posicion}</td>
-            <td><a href="perfil-${item.slug}.html">${item.nombreVisible}</a></td>
-            <td>${item.puntos}</td>
-            <td>${item.aciertos}</td>
-        `;
-        tbody.appendChild(fila);
-    });
-}
-
-async function actualizarClasificacionIndexAsync() {
-    const tabla = document.getElementById('tabla-clasificacion');
-    if (!tabla) return;
-
-    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
-
-    const mapaParticipantes = {
-        'Tomás': 'tomas',
-        'Miguel': 'miguel',
-        'Sofía': 'sofia',
-        'Inma': 'inma',
-        'Manolo': 'manolo',
-        'Martina': 'martina',
-        'Adri': 'adri',
-        'Fuen': 'fuen',
-        'Isa': 'isa',
-        'Jose': 'jose',
-        'María': 'maria',
-        'Moi': 'moi',
-        'Alba': 'alba',
-        'Enrique': 'enrique'
-    };
-
-    const clasificacion = await Promise.all(
-        Object.entries(mapaParticipantes).map(async ([nombreVisible, slug]) => {
-            const docId = DOC_ID_PARTICIPANTES[slug];
-            const pronosticosJugador = docId ? await cargarPronosticosPorDocId(docId) : {};
+    let clasificacion;
+    
+    if (useAsync) {
+        clasificacion = await Promise.all(
+            Object.entries(PARTICIPANTES).map(async ([nombreVisible, slug]) => {
+                const docId = DOC_ID_PARTICIPANTES[slug];
+                const pronosticosJugador = docId ? await cargarPronosticosPorDocId(docId) : {};
+                const { puntos, aciertos } = calcularPuntajePerfil(pronosticosOficiales, pronosticosJugador);
+                return { nombreVisible, slug, puntos, aciertos };
+            })
+        );
+    } else {
+        clasificacion = Object.entries(PARTICIPANTES).map(([nombreVisible, slug]) => {
+            const config = perfilesConfig[slug];
+            const pronosticosJugador = config ? cargarPronosticosPorClave(config.key) : {};
             const { puntos, aciertos } = calcularPuntajePerfil(pronosticosOficiales, pronosticosJugador);
             return { nombreVisible, slug, puntos, aciertos };
-        })
-    );
+        });
+    }
 
     clasificacion.sort((a, b) => {
         if (a.puntos !== b.puntos) return b.puntos - a.puntos;
@@ -482,28 +398,31 @@ async function actualizarClasificacionIndexAsync() {
         `;
         tbody.appendChild(fila);
     });
+}
+
+// Alias para compatibilidad hacia atrás
+async function actualizarClasificacionIndexAsync() {
+    return actualizarClasificacionIndex(true);
 }
 
 // ====================================================================
 // 0.2 MARCADO DE ACIERTOS EN PERFILES (VISUAL)
 // ====================================================================
 
-function marcarAciertosPerfil() {
+async function marcarAciertosPerfil(useAsync = false) {
     if (!perfilNombre) return; // Solo para páginas de perfil
 
-    const pronosticosOficiales = pronosticosOficialesCache || cargarPronosticosPorClave(perfilesConfig.partidos.key);
+    const pronosticosOficiales = useAsync 
+        ? await cargarPronosticosOficialesAsync()
+        : (pronosticosOficialesCache || cargarPronosticosPorClave(perfilesConfig.partidos.key));
 
-    document.querySelectorAll('.partido-card').forEach(card => {
-        // limpiar badge previa
+    const marcarPartido = (card, oficial, jugador) => {
+        // Limpiar badge previa
         card.querySelector('.badge-puntos')?.remove();
 
         const equipoLocal = card.querySelector('.equipo-local')?.textContent?.trim();
         const equipoVisitante = card.querySelector('.equipo-visitante')?.textContent?.trim();
         if (!equipoLocal || !equipoVisitante) return;
-
-        const nombrePartido = `${equipoLocal} vs ${equipoVisitante}`;
-        const oficial = pronosticosOficiales[nombrePartido];
-        const jugador = pronosticosConfirmados[nombrePartido];
 
         card.classList.remove('acierto-exacto', 'acierto-signo');
 
@@ -530,52 +449,24 @@ function marcarAciertosPerfil() {
             badge.textContent = '+2';
             card.prepend(badge);
         }
+    };
+
+    document.querySelectorAll('.partido-card').forEach(card => {
+        const equipoLocal = card.querySelector('.equipo-local')?.textContent?.trim();
+        const equipoVisitante = card.querySelector('.equipo-visitante')?.textContent?.trim();
+        if (!equipoLocal || !equipoVisitante) return;
+
+        const nombrePartido = `${equipoLocal} vs ${equipoVisitante}`;
+        const oficial = pronosticosOficiales[nombrePartido];
+        const jugador = pronosticosConfirmados[nombrePartido];
+
+        marcarPartido(card, oficial, jugador);
     });
 }
 
+// Alias para compatibilidad hacia atrás
 async function marcarAciertosPerfilAsync() {
-    if (!perfilNombre) return; // Solo para páginas de perfil
-
-    const pronosticosOficiales = await cargarPronosticosOficialesAsync();
-
-    document.querySelectorAll('.partido-card').forEach(card => {
-        // limpiar badge previa
-        card.querySelector('.badge-puntos')?.remove();
-
-        const equipoLocal = card.querySelector('.equipo-local')?.textContent?.trim();
-        const equipoVisitante = card.querySelector('.equipo-visitante')?.textContent?.trim();
-        if (!equipoLocal || !equipoVisitante) return;
-
-        const nombrePartido = `${equipoLocal} vs ${equipoVisitante}`;
-        const oficial = pronosticosOficiales[nombrePartido];
-        const jugador = pronosticosConfirmados[nombrePartido];
-
-        card.classList.remove('acierto-exacto', 'acierto-signo');
-
-        if (!oficial || !jugador) return;
-        if (typeof oficial.local !== 'number' || typeof oficial.visitante !== 'number') return;
-        if (typeof jugador.local !== 'number' || typeof jugador.visitante !== 'number') return;
-
-        const esExacto = oficial.local === jugador.local && oficial.visitante === jugador.visitante;
-        if (esExacto) {
-            card.classList.add('acierto-exacto');
-            const badge = document.createElement('span');
-            badge.className = 'badge-puntos badge-exacto';
-            badge.textContent = '+5';
-            card.prepend(badge);
-            return;
-        }
-
-        const signoOficial = obtenerSignoResultado(oficial.local, oficial.visitante);
-        const signoJugador = obtenerSignoResultado(jugador.local, jugador.visitante);
-        if (signoOficial === signoJugador) {
-            card.classList.add('acierto-signo');
-            const badge = document.createElement('span');
-            badge.className = 'badge-puntos badge-signo';
-            badge.textContent = '+2';
-            card.prepend(badge);
-        }
-    });
+    return marcarAciertosPerfil(true);
 }
 
 /**
@@ -1156,6 +1047,19 @@ function manejarPronostico(event) {
             grupo: grupoNombre
         };
 
+            // Si estamos en partidos.html y es la final, guardar el ganador en los oficiales
+            if (esPaginaPartidos && nombrePartido && grupoNombre === 'FINAL') {
+                let ganador = null;
+                if (golLocal > golVisitante) ganador = equipoLocal;
+                else if (golLocal < golVisitante) ganador = equipoVisitante;
+                // Si hay empate, no hay campeón
+                if (ganador) {
+                    pronosticosConfirmados[nombrePartido].ganador = ganador;
+                } else {
+                    delete pronosticosConfirmados[nombrePartido].ganador;
+                }
+            }
+
         inputLocal.disabled = true;
         inputVisitante.disabled = true;
         btnConfirmar.disabled = true;
@@ -1603,12 +1507,11 @@ function manejarPronosticoEliminatoria(event) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const tablaClasificacion = document.getElementById('tabla-clasificacion');
-    
 
     // Si estamos en la página de clasificación, calculamos puntos y mostramos reglas
     if (tablaClasificacion) {
         if (firebaseDisponible) {
-            actualizarClasificacionIndexAsync().catch(e => {
+            actualizarClasificacionIndex(true).catch(e => {
                 console.error(e);
                 actualizarClasificacionIndex();
             });
@@ -1617,25 +1520,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const btnReglas = document.querySelector('.btn-reglas-header');
-        if (btnReglas) {
-            btnReglas.addEventListener('click', () => {
-                alert(
-`REGLAS DE PUNTUACIÓN
+        const modalReglas = document.getElementById('modal-reglas');
+        const closeModal = document.querySelector('.close-modal');
+        
+        if (btnReglas && modalReglas) {
+            const toggleModal = (show) => {
+                if (show) {
+                    modalReglas.classList.remove('modal-hidden');
+                } else {
+                    modalReglas.classList.add('modal-hidden');
+                }
+            };
 
-FASE DE GRUPOS
-- 5 puntos por acertar el resultado exacto de un partido.
-- 2 puntos por acertar simplemente (gana local, gana visitante o empate).
-
-ELIMINATORIAS (PRESENCIA POR RONDA)
-- Dieciseisavos: 2 puntos por cada equipo que esté en el resultado oficial y también en tu cuadro (cualquier cruce).
-- Octavos: 3 puntos por equipo.
-- Cuartos: 4 puntos por equipo.
-- Semifinales: 5 puntos por equipo.
-- Final: 6 puntos por cada finalista que coincide.
-
-BONUS CAMPEÓN
-- +4 puntos extra si aciertas el campeón del mundo (ganador de la Final).`);
+            btnReglas.addEventListener('click', () => toggleModal(true));
+            
+            if (closeModal) {
+                closeModal.addEventListener('click', () => toggleModal(false));
+            }
+            
+            // Usar delegación: escuchar en el modal en lugar de window
+            modalReglas.addEventListener('click', (event) => {
+                if (event.target === modalReglas) {
+                    toggleModal(false);
+                }
             });
+        }
+
+        // Botón de reinicio total (en index.html)
+        const btnReiniciarTotal = document.getElementById('btn-reiniciar-app-total');
+        if (btnReiniciarTotal) {
+            btnReiniciarTotal.addEventListener('click', reiniciarTodo);
         }
         return;
     }
@@ -1655,9 +1569,9 @@ BONUS CAMPEÓN
             await cargarPronosticosOficialesAsync();
             generarEstructuraPartidos();
             if (firebaseDisponible) {
-                await marcarAciertosPerfilAsync();
+                await marcarAciertosPerfil(true);
             } else {
-                marcarAciertosPerfil();
+                await marcarAciertosPerfil();
             }
             return;
         }
@@ -1695,14 +1609,6 @@ BONUS CAMPEÓN
     const btnReiniciar = document.getElementById('btn-reiniciar-app');
     if (btnReiniciar) {
         btnReiniciar.addEventListener('click', reiniciarPronosticos);
-    }
-});
-
-// 5. Manejo del botón de reinicio total (en index.html) - Fuera del DOMContentLoaded anterior
-document.addEventListener('DOMContentLoaded', () => {
-    const btnReiniciarTotal = document.getElementById('btn-reiniciar-app-total');
-    if (btnReiniciarTotal) {
-        btnReiniciarTotal.addEventListener('click', reiniciarTodo);
     }
 });
 
